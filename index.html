@@ -2,341 +2,475 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TERRITORY</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>TERRITORY — Field Test v0.4</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
 <style>
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: #101318;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-header {
-  padding: 18px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-h1 { margin: 0; font-size: 25px; letter-spacing: 3px; }
-.status { color: #a6ef39; font-size: 12px; }
-#map { width: 100%; height: 55vh; min-height: 350px; }
-.panel { padding: 18px 20px 28px; }
-.stats { display: flex; gap: 9px; margin-bottom: 18px; }
-.stat {
-  flex: 1;
-  background: #1c222b;
-  padding: 12px 8px;
-  border-radius: 12px;
-}
-.stat-label { color: #929ba8; font-size: 10px; margin-bottom: 6px; }
-.stat-value { font-size: 18px; font-weight: 700; }
-button {
-  width: 100%;
-  border: 0;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 10px;
-  font-size: 16px;
-  font-weight: 700;
-}
-button:disabled { opacity: .4; }
-.primary { background: #a6ef39; color: #111; }
-.secondary { background: #303844; color: white; }
-.message {
-  min-height: 22px;
-  color: #a6ef39;
-  font-size: 13px;
-  text-align: center;
-  margin-top: 5px;
+:root{--bg:#0c1117;--panel:#141c25;--line:#263442;--muted:#91a0af;--text:#f2f5f7;--lime:#c7f36b;--blue:#64b5ff;--red:#ff6b75}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{height:62px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#0c1117;position:relative;z-index:500}
+.brand{font-size:20px;font-weight:850;letter-spacing:2px}
+.brand span{color:var(--lime)}
+.status{font-size:11px;color:var(--lime);letter-spacing:1px}
+#map{height:48dvh;min-height:300px;background:#18232d}
+.panel{padding:14px 16px 18px;background:var(--panel);border-top:1px solid var(--line)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#0e151d;border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+.stat small{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}
+.stat strong{font-size:16px;font-weight:750}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{border:0;border-radius:10px;padding:13px 10px;font-size:14px;font-weight:750;cursor:pointer}
+.primary{background:var(--lime);color:#10170a}
+.secondary{background:#253443;color:var(--text);border:1px solid #35495b}
+.btn:disabled{opacity:.4}
+.hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;font-size:12px;font-weight:800;letter-spacing:.8px}
+.count{font-size:10px;color:var(--muted);font-weight:500;letter-spacing:0}
+#territoryList{display:grid;gap:7px;max-height:170px;overflow:auto}
+.territory-item{display:flex;align-items:center;gap:8px;background:#0e151d;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+.territory-main{min-width:0;flex:1;cursor:pointer}
+.territory-name{font-size:12px;font-weight:700}
+.territory-meta{font-size:10px;color:var(--muted);margin-top:3px}
+.small-btn{background:#253443;color:#dce5ed;border:1px solid #35495b;border-radius:7px;padding:7px 9px;font-size:11px}
+.empty{font-size:11px;color:var(--muted);padding:12px;border:1px dashed #35495b;border-radius:9px;text-align:center}
+.toast{position:fixed;z-index:1000;left:50%;top:74px;transform:translateX(-50%);background:#202d39;border:1px solid #43586a;border-radius:10px;padding:10px 14px;font-size:12px;max-width:90%;text-align:center;display:none;box-shadow:0 8px 24px #0008}
+.leaflet-control-attribution{font-size:9px!important}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17222d;color:#fff}
+.leaflet-popup-content{font-size:12px}
+@media(min-width:700px){
+#map{height:55vh}
+.panel{padding:16px max(16px,calc((100vw - 700px)/2)) 20px}
+.stats,.actions,.hint,.section-head,#territoryList{max-width:700px;margin-left:auto;margin-right:auto}
+.section-head{margin-top:18px;margin-bottom:8px}
 }
 </style>
 </head>
-
 <body>
 <header>
-  <h1>TERRITORY</h1>
-  <div class="status" id="gpsStatus">GPS 未接続</div>
+<div class="brand">TERRA<span>·</span>TORY</div>
+<div class="status">FIELD TEST <span style="color:#bdc9d3">v0.4</span></div>
 </header>
 
 <div id="map"></div>
+<div class="toast" id="toast"></div>
 
 <section class="panel">
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-label">DISTANCE</div>
-      <div class="stat-value" id="distance">0 m</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">AREA</div>
-      <div class="stat-value" id="area">0 ㎡</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">TERRITORIES</div>
-      <div class="stat-value" id="territories">0</div>
-    </div>
-  </div>
+<div class="stats">
+<div class="stat"><small>WALK DISTANCE</small><strong id="distance">0 m</strong></div>
+<div class="stat"><small>TOTAL TERRITORY</small><strong id="area">0 ㎡</strong></div>
+<div class="stat"><small>GPS STATUS</small><strong id="gps">待機中</strong></div>
+</div>
 
-  <button class="primary" id="startButton">WALK START</button>
-  <button class="secondary" id="finishButton" disabled>WALK FINISH</button>
-  <button class="primary" id="claimButton" disabled>CLAIM TERRITORY</button>
-  <div class="message" id="message">
-    位置情報を許可してWALK STARTを押してください
-  </div>
+<div class="actions">
+<button class="btn primary" id="start">歩行を記録する</button>
+<button class="btn secondary" id="finish" disabled>領土を確定する</button>
+</div>
+
+<div class="hint" id="hint">
+安全な歩道を歩き、開始地点の近くに戻って領土を確定してください。獲得した領土はこの端末のブラウザに自動保存されます。
+</div>
+
+<div class="section-head">
+<span>YOUR TERRITORIES</span>
+<span class="count" id="territoryCount">0 territories</span>
+</div>
+
+<div id="territoryList">
+<div class="empty">まだ領土がありません。最初の領土を獲得しよう。</div>
+</div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-const map = L.map("map").setView([35.6812,139.7671],16);
+(() => {
+'use strict';
 
-L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors"
-  }
-).addTo(map);
+const STORAGE_KEY = 'territory_save_v04';
 
-let marker = null;
-let accuracyCircle = null;
-let routeLine = null;
-let territoryLayer = null;
-let watchId = null;
-let recording = false;
-let closed = false;
-let route = [];
-let totalDistance = 0;
-let territoryCount = 0;
-let currentArea = 0;
+const map = L.map('map', {zoomControl:false})
+.setView([35.6812,139.7671],16);
 
-const MIN_DISTANCE = 300;
-const CLOSE_DISTANCE = 40;
-const MAX_ACCURACY = 35;
-const MIN_POINTS = 5;
+L.control.zoom({position:'topright'}).addTo(map);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19,
+attribution:'&copy; OpenStreetMap'
+}).addTo(map);
 
 const $ = id => document.getElementById(id);
+const fmt = n => n < 1000
+? Math.round(n)+' m'
+: (n/1000).toFixed(2)+' km';
 
-function message(text) {
-  $("message").textContent = text;
+let points = [];
+let watchId = null;
+let recording = false;
+let track = null;
+let currentMarker = null;
+let territories = [];
+let territoryLayers = new Map();
+
+function toast(message){
+const el = $('toast');
+el.textContent = message;
+el.style.display = 'block';
+clearTimeout(toast.timer);
+toast.timer = setTimeout(()=>el.style.display='none',2600);
 }
 
-function distance(a,b) {
-  const R = 6371000;
-  const rad = Math.PI / 180;
-  const p1 = a.lat * rad;
-  const p2 = b.lat * rad;
-  const dp = (b.lat-a.lat) * rad;
-  const dl = (b.lng-a.lng) * rad;
-  const x = Math.sin(dp/2)**2 +
-    Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+function distance(a,b){
+const R=6371000;
+const rad=Math.PI/180;
+const dLat=(b[0]-a[0])*rad;
+const dLon=(b[1]-a[1])*rad;
+
+const x=
+Math.sin(dLat/2)**2+
+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*
+Math.sin(dLon/2)**2;
+
+return 2*R*Math.asin(Math.sqrt(x));
 }
 
-function area(points) {
-  if (points.length < 3) return 0;
-  const lat0 = points.reduce((s,p)=>s+p.lat,0)/points.length;
-  const R = 6371000;
-  const rad = Math.PI/180;
-  const xy = points.map(p=>({
-    x: R*p.lng*rad*Math.cos(lat0*rad),
-    y: R*p.lat*rad
-  }));
-  let sum = 0;
-  for(let i=0;i<xy.length;i++){
-    const j=(i+1)%xy.length;
-    sum += xy[i].x*xy[j].y-xy[j].x*xy[i].y;
-  }
-  return Math.abs(sum/2);
+function routeDistance(coords){
+let d=0;
+for(let i=1;i<coords.length;i++){
+d+=distance(coords[i-1],coords[i]);
+}
+return d;
 }
 
-function updateStats() {
-  $("distance").textContent = Math.round(totalDistance)+" m";
-  $("area").textContent = Math.round(currentArea).toLocaleString()+" ㎡";
+function polygonArea(coords){
+let sum=0;
+
+for(let i=0;i<coords.length;i++){
+const j=(i+1)%coords.length;
+sum+=coords[i][1]*coords[j][0]-
+coords[j][1]*coords[i][0];
 }
 
-function drawRoute() {
-  const points = route.map(p=>[p.lat,p.lng]);
-  if(routeLine) map.removeLayer(routeLine);
-  if(points.length>=2){
-    routeLine=L.polyline(points,{
-      color:"#a6ef39",weight:5
-    }).addTo(map);
-  }
+return Math.abs(sum)*111320*111320*
+Math.cos(coords[0][0]*Math.PI/180)/2;
 }
 
-function updatePosition(position) {
-  const lat=position.coords.latitude;
-  const lng=position.coords.longitude;
-  const accuracy=position.coords.accuracy;
-  const current={lat,lng};
-
-  $("gpsStatus").textContent="GPS 接続中";
-
-  if(!marker){
-    marker=L.circleMarker([lat,lng],{
-      radius:8,color:"#fff",weight:3,
-      fillColor:"#258cff",fillOpacity:1
-    }).addTo(map);
-
-    accuracyCircle=L.circle([lat,lng],{
-      radius:accuracy,color:"#258cff",
-      fillColor:"#258cff",fillOpacity:.08
-    }).addTo(map);
-
-    map.setView([lat,lng],17);
-  } else {
-    marker.setLatLng([lat,lng]);
-    accuracyCircle.setLatLng([lat,lng]);
-    accuracyCircle.setRadius(accuracy);
-  }
-
-  if(!recording) return;
-
-  if(accuracy>MAX_ACCURACY){
-    message("GPS精度が低いため記録を保留しています");
-    return;
-  }
-
-  if(route.length===0){
-    route.push(current);
-    drawRoute();
-    return;
-  }
-
-  const previous=route[route.length-1];
-  const moved=distance(previous,current);
-
-  if(moved<3) return;
-
-  if(moved>100){
-    message("位置情報の急な変化を検出しました");
-    return;
-  }
-
-  route.push(current);
-  totalDistance+=moved;
-  drawRoute();
-  updateStats();
-  message("歩行ルートを記録中です");
+function save(){
+try{
+localStorage.setItem(STORAGE_KEY,JSON.stringify(territories));
+}catch(e){
+toast('保存できません。端末の空き容量を確認してください');
+}
 }
 
-function stopGPS() {
-  if(watchId!==null){
-    navigator.geolocation.clearWatch(watchId);
-    watchId=null;
-  }
-  recording=false;
-  $("startButton").disabled=false;
-  $("finishButton").disabled=true;
+function load(){
+try{
+const raw=localStorage.getItem(STORAGE_KEY);
+const parsed=raw?JSON.parse(raw):[];
+
+territories=Array.isArray(parsed)
+?parsed.filter(t=>
+t&&Array.isArray(t.points)&&
+t.points.length>=3&&
+Number.isFinite(t.area))
+:[];
+}catch(e){
+territories=[];
+toast('保存データを読み込めませんでした');
+}
 }
 
-$("startButton").addEventListener("click",()=>{
-  if(!navigator.geolocation){
-    message("このブラウザはGPSに対応していません");
-    return;
-  }
-  if(recording) return;
+function updateStats(){
+const totalArea=territories.reduce((s,t)=>s+t.area,0);
+$('area').textContent=Math.round(totalArea).toLocaleString()+' ㎡';
+$('territoryCount').textContent=territories.length+' territories';
+$('distance').textContent=fmt(routeDistance(points));
+}
 
-  route=[];
-  totalDistance=0;
-  currentArea=0;
-  closed=false;
+function renderList(){
+const list=$('territoryList');
 
-  if(routeLine) map.removeLayer(routeLine);
-  if(territoryLayer) map.removeLayer(territoryLayer);
+if(!territories.length){
+list.innerHTML='<div class="empty">まだ領土がありません。最初の領土を獲得しよう。</div>';
+updateStats();
+return;
+}
 
-  territoryLayer=null;
-  updateStats();
-  $("claimButton").disabled=true;
-  $("startButton").disabled=true;
-  $("finishButton").disabled=false;
-  recording=true;
+list.innerHTML='';
 
-  message("GPSで歩行ルートを記録しています");
+territories.slice().reverse().forEach(t=>{
+const row=document.createElement('div');
+row.className='territory-item';
 
-  watchId=navigator.geolocation.watchPosition(
-    updatePosition,
-    error=>{
-      message("GPSエラー: "+error.message);
-      $("gpsStatus").textContent="GPS エラー";
-    },
-    {
-      enableHighAccuracy:true,
-      maximumAge:0,
-      timeout:15000
-    }
-  );
+const main=document.createElement('div');
+main.className='territory-main';
+
+const name=document.createElement('div');
+name.className='territory-name';
+name.textContent=t.name||'TERRITORY';
+
+const meta=document.createElement('div');
+meta.className='territory-meta';
+meta.textContent=
+Math.round(t.area).toLocaleString()+' ㎡ · '+
+new Date(t.acquiredAt).toLocaleDateString('ja-JP');
+
+main.append(name,meta);
+main.addEventListener('click',()=>focusTerritory(t.id));
+
+const del=document.createElement('button');
+del.className='small-btn';
+del.textContent='削除';
+del.addEventListener('click',()=>deleteTerritory(t.id));
+
+row.append(main,del);
+list.append(row);
 });
 
-$("finishButton").addEventListener("click",()=>{
-  if(!recording) return;
-
-  if(route.length<MIN_POINTS ||
-     totalDistance<MIN_DISTANCE){
-    stopGPS();
-    message("距離または記録点が不足しています。もう一度試してください");
-    return;
-  }
-
-  const gap=distance(route[0],route[route.length-1]);
-
-  if(gap>CLOSE_DISTANCE){
-    stopGPS();
-    message("スタート地点から40m以内に戻っていません。今回は獲得できません");
-    return;
-  }
-
-  closed=true;
-  stopGPS();
-
-  currentArea=area(route);
-  updateStats();
-
-  const polygonPoints=route.map(p=>[p.lat,p.lng]);
-  polygonPoints.push(polygonPoints[0]);
-
-  territoryLayer=L.polygon(polygonPoints,{
-    color:"#a6ef39",
-    weight:3,
-    fillColor:"#a6ef39",
-    fillOpacity:.25
-  }).addTo(map);
-
-  map.fitBounds(territoryLayer.getBounds(),{
-    padding:[30,30]
-  });
-
-  $("claimButton").disabled=false;
-  message("一周完了！領土を獲得できます");
-});
-
-$("claimButton").addEventListener("click",()=>{
-  if(!closed || route.length<MIN_POINTS) return;
-
-  territoryCount++;
-  $("territories").textContent=territoryCount;
-  $("claimButton").disabled=true;
-  message("領土を獲得しました！");
-});
-
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(
-    updatePosition,
-    error=>{
-      $("gpsStatus").textContent="GPS 未接続";
-      message("位置情報を許可してください");
-    },
-    {
-      enableHighAccuracy:true,
-      timeout:15000,
-      maximumAge:0
-    }
-  );
+updateStats();
 }
+
+function drawTerritory(t){
+const layer=L.polygon(t.points,{
+color:'#c7f36b',
+weight:2,
+fillColor:'#c7f36b',
+fillOpacity:.22
+}).addTo(map);
+
+layer.bindPopup(
+'<b>YOUR TERRITORY</b><br>'+
+Math.round(t.area).toLocaleString()+' ㎡'
+);
+
+layer.on('click',()=>focusTerritory(t.id,false));
+territoryLayers.set(t.id,layer);
+}
+
+function restoreTerritories(){
+territories.forEach(drawTerritory);
+renderList();
+
+if(territories.length){
+const group=L.featureGroup([...territoryLayers.values()]);
+map.fitBounds(group.getBounds(),{
+padding:[25,25],
+maxZoom:16
+});
+}
+}
+
+function focusTerritory(id,open=true){
+const layer=territoryLayers.get(id);
+if(!layer)return;
+
+map.fitBounds(layer.getBounds(),{
+padding:[35,35],
+maxZoom:18
+});
+
+if(open)layer.openPopup();
+}
+
+function deleteTerritory(id){
+if(!confirm('この領土を削除しますか？この操作は元に戻せません。')){
+return;
+}
+
+const layer=territoryLayers.get(id);
+if(layer)map.removeLayer(layer);
+
+territoryLayers.delete(id);
+territories=territories.filter(t=>t.id!==id);
+
+save();
+renderList();
+toast('領土を削除しました');
+}
+
+function addPoint(lat,lon){
+const p=[lat,lon];
+
+if(points.length && distance(points[points.length-1],p)<3)return;
+if(points.length && distance(points[points.length-1],p)>100)return;
+
+points.push(p);
+
+if(track)map.removeLayer(track);
+
+track=L.polyline(points,{
+color:'#64b5ff',
+weight:4,
+opacity:.95
+}).addTo(map);
+
+if(!currentMarker){
+currentMarker=L.circleMarker(p,{
+radius:7,
+color:'#fff',
+weight:2,
+fillColor:'#64b5ff',
+fillOpacity:1
+}).addTo(map);
+}else{
+currentMarker.setLatLng(p);
+}
+
+$('distance').textContent=fmt(routeDistance(points));
+}
+
+function stopTracking(){
+if(watchId!==null && navigator.geolocation){
+navigator.geolocation.clearWatch(watchId);
+}
+watchId=null;
+}
+
+function start(){
+if(recording)return;
+
+points=[];
+recording=true;
+
+if(track){
+map.removeLayer(track);
+track=null;
+}
+
+if(currentMarker){
+map.removeLayer(currentMarker);
+currentMarker=null;
+}
+
+$('distance').textContent='0 m';
+$('gps').textContent='GPS取得中';
+$('start').disabled=true;
+$('finish').disabled=false;
+
+$('hint').textContent=
+'歩行を記録中です。安全な歩道を歩き、開始地点の近くに戻ってください。';
+
+if(!navigator.geolocation){
+recording=false;
+$('start').disabled=false;
+$('finish').disabled=true;
+$('gps').textContent='利用不可';
+toast('この端末ではGPSを利用できません');
+return;
+}
+
+watchId=navigator.geolocation.watchPosition(pos=>{
+if(!recording)return;
+
+if(pos.coords.accuracy>35){
+$('gps').textContent='GPS精度低';
+return;
+}
+
+addPoint(pos.coords.latitude,pos.coords.longitude);
+$('gps').textContent='GPS良好';
+
+map.panTo([
+pos.coords.latitude,
+pos.coords.longitude
+]);
+
+},err=>{
+$('gps').textContent='GPSエラー';
+
+toast(err.code===1
+?'位置情報の利用を許可してください'
+:'GPSを取得できません。屋外で再試行してください');
+
+},{
+enableHighAccuracy:true,
+maximumAge:1000,
+timeout:15000
+});
+}
+
+function finish(){
+if(!recording)return;
+
+if(points.length<5){
+toast('記録点が不足しています（5点以上必要）');
+return;
+}
+
+const d=routeDistance(points);
+const close=distance(points[0],points[points.length-1]);
+
+if(d<300){
+toast('歩行距離が300m未満です');
+return;
+}
+
+if(close>40){
+toast('開始地点から40m以内に戻ってください（現在 '+Math.round(close)+'m）');
+return;
+}
+
+recording=false;
+stopTracking();
+
+$('start').disabled=false;
+$('finish').disabled=true;
+$('gps').textContent='保存済み';
+
+const coords=points.map(p=>[p[0],p[1]]);
+const area=polygonArea(coords);
+
+const territory={
+id:'t_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+name:'TERRITORY #'+(territories.length+1),
+points:coords,
+area,
+distance:d,
+acquiredAt:new Date().toISOString()
+};
+
+territories.push(territory);
+
+save();
+drawTerritory(territory);
+renderList();
+
+map.fitBounds(
+territoryLayers.get(territory.id).getBounds(),
+{padding:[30,30]}
+);
+
+$('hint').textContent=
+'領土を獲得しました。ブラウザに自動保存されています。再読み込みしても残ります。';
+
+toast('TERRITORY CLAIMED · SAVED');
+
+points=[];
+
+if(track){
+map.removeLayer(track);
+track=null;
+}
+
+if(currentMarker){
+map.removeLayer(currentMarker);
+currentMarker=null;
+}
+
+$('distance').textContent='0 m';
+}
+
+$('start').addEventListener('click',start);
+$('finish').addEventListener('click',finish);
+
+window.addEventListener('beforeunload',()=>{
+if(recording)stopTracking();
+});
+
+load();
+restoreTerritories();
+
+})();
 </script>
 </body>
 </html>
