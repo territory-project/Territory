@@ -1,21 +1,27 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>TERRITORY — Field Test v0.4</title>
+<title>TERRITORY — v0.7</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--bg:#0c1117;--panel:#141c25;--line:#263442;--muted:#91a0af;--text:#f2f5f7;--lime:#c7f36b;--blue:#64b5ff;--red:#ff6b75}
+:root{--bg:#0c1117;--panel:#141c25;--line:#263442;--muted:#91a0af;--text:#f2f5f7;--lime:#c7f36b;--blue:#64b5ff}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 header{height:62px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#0c1117;position:relative;z-index:500}
 .brand{font-size:20px;font-weight:850;letter-spacing:2px}
 .brand span{color:var(--lime)}
 .status{font-size:11px;color:var(--lime);letter-spacing:1px}
-#map{height:48dvh;min-height:300px;background:#18232d}
-.panel{padding:14px 16px 18px;background:var(--panel);border-top:1px solid var(--line)}
+#map{height:45dvh;min-height:280px;background:#18232d}
+.panel{padding:14px 16px 20px;background:var(--panel);border-top:1px solid var(--line)}
+.auth{background:#0e151d;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.auth-title{font-size:12px;font-weight:800;letter-spacing:.8px;margin-bottom:9px}
+.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input{width:100%;min-width:0;background:#18232d;color:var(--text);border:1px solid #35495b;border-radius:8px;padding:11px;font-size:13px}
+.auth-actions{display:flex;gap:8px;margin-top:8px}
+.auth-actions button{flex:1}
+.auth-state{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 .stat{background:#0e151d;border:1px solid var(--line);border-radius:10px;padding:9px 10px}
 .stat small{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}
@@ -25,10 +31,13 @@ header{height:62px;padding:0 18px;display:flex;align-items:center;justify-conten
 .primary{background:var(--lime);color:#10170a}
 .secondary{background:#253443;color:var(--text);border:1px solid #35495b}
 .btn:disabled{opacity:.4}
-.hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.mode-row{display:flex;gap:8px;margin-bottom:9px}
+.mode{flex:1;background:#1c2935;color:#cbd6df;border:1px solid #35495b;border-radius:9px;padding:10px 6px;font-size:12px;font-weight:750}
+.mode.active{background:#34451f;color:var(--lime);border-color:#829d45}
+.hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.55}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;font-size:12px;font-weight:800;letter-spacing:.8px}
 .count{font-size:10px;color:var(--muted);font-weight:500;letter-spacing:0}
-#territoryList{display:grid;gap:7px;max-height:170px;overflow:auto}
+#territoryList{display:grid;gap:7px;max-height:190px;overflow:auto}
 .territory-item{display:flex;align-items:center;gap:8px;background:#0e151d;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
 .territory-main{min-width:0;flex:1;cursor:pointer}
 .territory-name{font-size:12px;font-weight:700}
@@ -40,9 +49,9 @@ header{height:62px;padding:0 18px;display:flex;align-items:center;justify-conten
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17222d;color:#fff}
 .leaflet-popup-content{font-size:12px}
 @media(min-width:700px){
-#map{height:55vh}
+#map{height:52vh}
 .panel{padding:16px max(16px,calc((100vw - 700px)/2)) 20px}
-.stats,.actions,.hint,.section-head,#territoryList{max-width:700px;margin-left:auto;margin-right:auto}
+.auth,.stats,.actions,.mode-row,.hint,.section-head,#territoryList{max-width:700px;margin-left:auto;margin-right:auto}
 .section-head{margin-top:18px;margin-bottom:8px}
 }
 </style>
@@ -50,17 +59,46 @@ header{height:62px;padding:0 18px;display:flex;align-items:center;justify-conten
 <body>
 <header>
 <div class="brand">TERRA<span>·</span>TORY</div>
-<div class="status">FIELD TEST <span style="color:#bdc9d3">v0.4</span></div>
+<div class="status">FIELD TEST <span style="color:#bdc9d3">v0.7</span></div>
 </header>
 
 <div id="map"></div>
 <div class="toast" id="toast"></div>
 
 <section class="panel">
+<div class="auth">
+<div class="auth-title">PLAYER ACCOUNT</div>
+<div id="authForm">
+<div class="auth-grid">
+<input id="email" type="email" autocomplete="email" placeholder="メールアドレス">
+<input id="password" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）">
+</div>
+<div class="auth-actions">
+<button class="btn primary" id="signup">新規登録</button>
+<button class="btn secondary" id="login">ログイン</button>
+</div>
+</div>
+<div id="signedIn" hidden>
+<div class="auth-grid">
+<input id="username" maxlength="24" placeholder="プレイヤー名">
+<button class="btn secondary" id="saveName">名前を保存</button>
+</div>
+<div class="auth-actions">
+<button class="btn secondary" id="logout">ログアウト</button>
+</div>
+</div>
+<div class="auth-state" id="authState">ログインすると、獲得した領土がオンラインで共有されます。</div>
+</div>
+
 <div class="stats">
 <div class="stat"><small>WALK DISTANCE</small><strong id="distance">0 m</strong></div>
-<div class="stat"><small>TOTAL TERRITORY</small><strong id="area">0 ㎡</strong></div>
+<div class="stat"><small>MY TERRITORY</small><strong id="area">0 ㎡</strong></div>
 <div class="stat"><small>GPS STATUS</small><strong id="gps">待機中</strong></div>
+</div>
+
+<div class="mode-row">
+<button class="mode active" id="fullMode">完全包囲</button>
+<button class="mode" id="partialMode">部分包囲・拡張</button>
 </div>
 
 <div class="actions">
@@ -69,406 +107,838 @@ header{height:62px;padding:0 18px;display:flex;align-items:center;justify-conten
 </div>
 
 <div class="hint" id="hint">
-安全な歩道を歩き、開始地点の近くに戻って領土を確定してください。獲得した領土はこの端末のブラウザに自動保存されます。
+ログイン後、安全な歩道を歩いて領土を獲得できます。
+完全包囲は開始地点に戻り、部分包囲は自分の領土の境界から別の境界まで歩きます。
 </div>
 
 <div class="section-head">
-<span>YOUR TERRITORIES</span>
+<span>ALL PLAYERS' TERRITORIES</span>
 <span class="count" id="territoryCount">0 territories</span>
 </div>
-
 <div id="territoryList">
-<div class="empty">まだ領土がありません。最初の領土を獲得しよう。</div>
+<div class="empty">オンラインの領土を読み込み中...</div>
 </div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
 <script>
-(() => {
+(()=>{
 'use strict';
 
-const STORAGE_KEY = 'territory_save_v04';
+const SUPABASE_URL='https://ejinnfazjryfgpawndfw.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_Z6zBkFrFPHsf5CAAQLemVg_GKEkm2PK';
+const LEGACY_STORAGE_KEY='territory_save_v04';
+const PROFILE_STORAGE_KEY='territory_profile_v06';
 
-const map = L.map('map', {zoomControl:false})
-.setView([35.6812,139.7671],16);
+const supabase=window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+const map=L.map('map',{zoomControl:false})
+  .setView([35.6812,139.7671],16);
 
 L.control.zoom({position:'topright'}).addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19,
-attribution:'&copy; OpenStreetMap'
+  maxZoom:19,
+  attribution:'&copy; OpenStreetMap'
 }).addTo(map);
 
-const $ = id => document.getElementById(id);
-const fmt = n => n < 1000
-? Math.round(n)+' m'
-: (n/1000).toFixed(2)+' km';
+const $=id=>document.getElementById(id);
+const fmt=n=>n<1000
+  ?Math.round(n)+' m'
+  :(n/1000).toFixed(2)+' km';
 
-let points = [];
-let watchId = null;
-let recording = false;
-let track = null;
-let currentMarker = null;
-let territories = [];
-let territoryLayers = new Map();
+let user=null;
+let profile=null;
+let points=[];
+let watchId=null;
+let recording=false;
+let track=null;
+let currentMarker=null;
+let territories=[];
+let territoryLayers=new Map();
+let mode='full';
+let channel=null;
+let busy=false;
 
-function toast(message){
-const el = $('toast');
-el.textContent = message;
-el.style.display = 'block';
-clearTimeout(toast.timer);
-toast.timer = setTimeout(()=>el.style.display='none',2600);
+function toast(m){
+  const e=$('toast');
+  e.textContent=m;
+  e.style.display='block';
+  clearTimeout(toast.timer);
+  toast.timer=setTimeout(()=>e.style.display='none',3200);
 }
 
 function distance(a,b){
-const R=6371000;
-const rad=Math.PI/180;
-const dLat=(b[0]-a[0])*rad;
-const dLon=(b[1]-a[1])*rad;
-
-const x=
-Math.sin(dLat/2)**2+
-Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*
-Math.sin(dLon/2)**2;
-
-return 2*R*Math.asin(Math.sqrt(x));
+  const R=6371000,r=Math.PI/180;
+  const dl=(b[0]-a[0])*r;
+  const dn=(b[1]-a[1])*r;
+  const x=Math.sin(dl/2)**2+
+    Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
 }
 
-function routeDistance(coords){
-let d=0;
-for(let i=1;i<coords.length;i++){
-d+=distance(coords[i-1],coords[i]);
-}
-return d;
+function routeDistance(c){
+  let d=0;
+  for(let i=1;i<c.length;i++)d+=distance(c[i-1],c[i]);
+  return d;
 }
 
-function polygonArea(coords){
-let sum=0;
-
-for(let i=0;i<coords.length;i++){
-const j=(i+1)%coords.length;
-sum+=coords[i][1]*coords[j][0]-
-coords[j][1]*coords[i][0];
+function toRing(c){
+  const r=c.map(p=>[p[1],p[0]]);
+  if(r.length&&(r[0][0]!==r[r.length-1][0]||
+    r[0][1]!==r[r.length-1][1]))r.push([...r[0]]);
+  return r;
 }
 
-return Math.abs(sum)*111320*111320*
-Math.cos(coords[0][0]*Math.PI/180)/2;
+function polygonFeature(c){
+  return turf.polygon([toRing(c)]);
 }
 
-function save(){
-try{
-localStorage.setItem(STORAGE_KEY,JSON.stringify(territories));
-}catch(e){
-toast('保存できません。端末の空き容量を確認してください');
-}
+function areaOf(c){
+  try{return turf.area(polygonFeature(c))}
+  catch(e){return 0}
 }
 
-function load(){
-try{
-const raw=localStorage.getItem(STORAGE_KEY);
-const parsed=raw?JSON.parse(raw):[];
-
-territories=Array.isArray(parsed)
-?parsed.filter(t=>
-t&&Array.isArray(t.points)&&
-t.points.length>=3&&
-Number.isFinite(t.area))
-:[];
-}catch(e){
-territories=[];
-toast('保存データを読み込めませんでした');
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
 }
+
+function own(t){
+  return !!user&&t.owner_id===user.id;
 }
 
 function updateStats(){
-const totalArea=territories.reduce((s,t)=>s+t.area,0);
-$('area').textContent=Math.round(totalArea).toLocaleString()+' ㎡';
-$('territoryCount').textContent=territories.length+' territories';
-$('distance').textContent=fmt(routeDistance(points));
+  const mine=territories.filter(own);
+  $('area').textContent=Math.round(
+    mine.reduce((s,t)=>s+Number(t.area_sqm||0),0)
+  ).toLocaleString()+' ㎡';
+  $('territoryCount').textContent=territories.length+' territories';
+  $('distance').textContent=fmt(routeDistance(points));
+}
+
+function clearLayers(){
+  for(const l of territoryLayers.values())map.removeLayer(l);
+  territoryLayers.clear();
 }
 
 function renderList(){
-const list=$('territoryList');
+  const list=$('territoryList');
 
-if(!territories.length){
-list.innerHTML='<div class="empty">まだ領土がありません。最初の領土を獲得しよう。</div>';
-updateStats();
-return;
+  if(!territories.length){
+    list.innerHTML='<div class="empty">まだ領土がありません。最初の領土を獲得しよう。</div>';
+    return;
+  }
+
+  list.innerHTML='';
+
+  territories.slice().sort((a,b)=>
+    new Date(b.created_at)-new Date(a.created_at)
+  ).forEach(t=>{
+    const row=document.createElement('div');
+    row.className='territory-item';
+
+    const main=document.createElement('div');
+    main.className='territory-main';
+
+    const n=document.createElement('div');
+    n.className='territory-name';
+    n.textContent=(own(t)?'★ ':'')+(t.name||'TERRITORY');
+
+    const meta=document.createElement('div');
+    meta.className='territory-meta';
+    meta.textContent=(t.profiles?.username||'プレイヤー')+' · '+
+      Math.round(Number(t.area_sqm||0)).toLocaleString()+' ㎡ · '+
+      new Date(t.created_at).toLocaleDateString('ja-JP');
+
+    main.append(n,meta);
+    main.addEventListener('click',()=>focusTerritory(t.id));
+    row.append(main);
+
+    if(own(t)){
+      const del=document.createElement('button');
+      del.className='small-btn';
+      del.textContent='削除';
+      del.addEventListener('click',()=>deleteTerritory(t));
+      row.append(del);
+    }
+    list.append(row);
+  });
 }
 
-list.innerHTML='';
+function drawTerritories(){
+  clearLayers();
 
-territories.slice().reverse().forEach(t=>{
-const row=document.createElement('div');
-row.className='territory-item';
+  territories.forEach(t=>{
+    if(!Array.isArray(t.polygon)||t.polygon.length<3)return;
 
-const main=document.createElement('div');
-main.className='territory-main';
+    const mine=own(t);
+    const color=mine?'#c7f36b':'#64b5ff';
 
-const name=document.createElement('div');
-name.className='territory-name';
-name.textContent=t.name||'TERRITORY';
+    const layer=L.polygon(t.polygon,{
+      color,
+      weight:2,
+      fillColor:color,
+      fillOpacity:.2
+    }).addTo(map);
 
-const meta=document.createElement('div');
-meta.className='territory-meta';
-meta.textContent=
-Math.round(t.area).toLocaleString()+' ㎡ · '+
-new Date(t.acquiredAt).toLocaleDateString('ja-JP');
+    layer.bindPopup(
+      '<b>'+esc(t.name||'TERRITORY')+'</b><br>'+
+      esc(t.profiles?.username||'プレイヤー')+'<br>'+
+      Math.round(Number(t.area_sqm||0)).toLocaleString()+' ㎡'+
+      (mine?'<br>あなたの領土':'')
+    );
 
-main.append(name,meta);
-main.addEventListener('click',()=>focusTerritory(t.id));
+    layer.on('click',()=>focusTerritory(t.id,false));
+    territoryLayers.set(t.id,layer);
+  });
 
-const del=document.createElement('button');
-del.className='small-btn';
-del.textContent='削除';
-del.addEventListener('click',()=>deleteTerritory(t.id));
-
-row.append(main,del);
-list.append(row);
-});
-
-updateStats();
-}
-
-function drawTerritory(t){
-const layer=L.polygon(t.points,{
-color:'#c7f36b',
-weight:2,
-fillColor:'#c7f36b',
-fillOpacity:.22
-}).addTo(map);
-
-layer.bindPopup(
-'<b>YOUR TERRITORY</b><br>'+
-Math.round(t.area).toLocaleString()+' ㎡'
-);
-
-layer.on('click',()=>focusTerritory(t.id,false));
-territoryLayers.set(t.id,layer);
-}
-
-function restoreTerritories(){
-territories.forEach(drawTerritory);
-renderList();
-
-if(territories.length){
-const group=L.featureGroup([...territoryLayers.values()]);
-map.fitBounds(group.getBounds(),{
-padding:[25,25],
-maxZoom:16
-});
-}
+  renderList();
+  updateStats();
 }
 
 function focusTerritory(id,open=true){
-const layer=territoryLayers.get(id);
-if(!layer)return;
+  const l=territoryLayers.get(id);
+  if(!l)return;
 
-map.fitBounds(layer.getBounds(),{
-padding:[35,35],
-maxZoom:18
-});
+  map.fitBounds(l.getBounds(),{
+    padding:[35,35],
+    maxZoom:18
+  });
 
-if(open)layer.openPopup();
+  if(open)l.openPopup();
 }
 
-function deleteTerritory(id){
-if(!confirm('この領土を削除しますか？この操作は元に戻せません。')){
-return;
-}
-
-const layer=territoryLayers.get(id);
-if(layer)map.removeLayer(layer);
-
-territoryLayers.delete(id);
-territories=territories.filter(t=>t.id!==id);
-
-save();
-renderList();
-toast('領土を削除しました');
-}
-
-function addPoint(lat,lon){
-const p=[lat,lon];
-
-if(points.length && distance(points[points.length-1],p)<3)return;
-if(points.length && distance(points[points.length-1],p)>100)return;
-
-points.push(p);
-
-if(track)map.removeLayer(track);
-
-track=L.polyline(points,{
-color:'#64b5ff',
-weight:4,
-opacity:.95
-}).addTo(map);
-
-if(!currentMarker){
-currentMarker=L.circleMarker(p,{
-radius:7,
-color:'#fff',
-weight:2,
-fillColor:'#64b5ff',
-fillOpacity:1
-}).addTo(map);
-}else{
-currentMarker.setLatLng(p);
-}
-
-$('distance').textContent=fmt(routeDistance(points));
+function clearTrack(){
+  if(track){map.removeLayer(track);track=null}
+  if(currentMarker){map.removeLayer(currentMarker);currentMarker=null}
 }
 
 function stopTracking(){
-if(watchId!==null && navigator.geolocation){
-navigator.geolocation.clearWatch(watchId);
+  if(watchId!==null&&navigator.geolocation){
+    navigator.geolocation.clearWatch(watchId);
+  }
+  watchId=null;
 }
-watchId=null;
+
+function addPoint(lat,lon){
+  const p=[lat,lon];
+
+  if(points.length&&distance(points.at(-1),p)<3)return;
+  if(points.length&&distance(points.at(-1),p)>100)return;
+
+  points.push(p);
+
+  if(track)map.removeLayer(track);
+  track=L.polyline(points,{
+    color:'#64b5ff',
+    weight:4,
+    opacity:.95
+  }).addTo(map);
+
+  if(!currentMarker){
+    currentMarker=L.circleMarker(p,{
+      radius:7,
+      color:'#fff',
+      weight:2,
+      fillColor:'#64b5ff',
+      fillOpacity:1
+    }).addTo(map);
+  }else{
+    currentMarker.setLatLng(p);
+  }
+
+  $('distance').textContent=fmt(routeDistance(points));
+}
+
+function nearestBoundary(p,ring){
+  let best={distance:Infinity,point:null,segment:0};
+
+  for(let i=0;i<ring.length;i++){
+    const a=ring[i],b=ring[(i+1)%ring.length];
+    const s=Math.cos(p[0]*Math.PI/180);
+    const ax=a[1]*s,ay=a[0];
+    const bx=b[1]*s,by=b[0];
+    const px=p[1]*s,py=p[0];
+    const dx=bx-ax,dy=by-ay;
+    const len=dx*dx+dy*dy;
+    const f=len?Math.max(0,Math.min(1,
+      ((px-ax)*dx+(py-ay)*dy)/len
+    )):0;
+
+    const q=[
+      a[0]+(b[0]-a[0])*f,
+      a[1]+(b[1]-a[1])*f
+    ];
+
+    const d=distance(p,q);
+    if(d<best.distance)best={distance:d,point:q,segment:i};
+  }
+  return best;
+}
+
+function boundaryPath(ring,start,end,forward){
+  const n=ring.length;
+  const arr=[start.point];
+
+  if(forward){
+    let i=(start.segment+1)%n,g=0;
+    while(i!==((end.segment+1)%n)&&g++<=n){
+      arr.push(ring[i]);
+      i=(i+1)%n;
+    }
+  }else{
+    let i=start.segment,g=0;
+    while(i!==end.segment&&g++<=n){
+      arr.push(ring[i]);
+      i=(i-1+n)%n;
+    }
+  }
+
+  arr.push(end.point);
+  return arr;
+}
+
+function makeExpansion(existing,route){
+  const ring=existing.polygon;
+
+  if(!Array.isArray(ring)||ring.length<3){
+    throw Error('既存領土の形状を読み込めません');
+  }
+
+  const s=nearestBoundary(route[0],ring);
+  const e=nearestBoundary(route.at(-1),ring);
+
+  if(s.distance>30||e.distance>30){
+    throw Error('開始・終了地点をそれぞれ自分の領土境界から30m以内にしてください');
+  }
+
+  if(routeDistance(route)<50){
+    throw Error('部分包囲は50m以上歩いてください');
+  }
+
+  const paths=[
+    boundaryPath(ring,s,e,true),
+    boundaryPath(ring,s,e,false)
+  ];
+
+  const candidates=paths.map(p=>
+    route.concat(p.slice().reverse().slice(1))
+  );
+
+  let best=null;
+
+  for(const c of candidates){
+    try{
+      const f=polygonFeature(c);
+      if(!turf.booleanValid(f))continue;
+
+      const a=turf.area(f);
+      if(a>=5&&(!best||a<best.area)){
+        best={feature:f,area:a};
+      }
+    }catch(err){}
+  }
+
+  if(!best){
+    throw Error('有効な拡張領域を作れません。別の境界地点を選んでください');
+  }
+
+  let merged;
+
+  try{
+    merged=turf.union(
+      turf.featureCollection([
+        polygonFeature(ring),
+        best.feature
+      ])
+    );
+  }catch(err){
+    throw Error('領土の統合に失敗しました。別のルートで試してください');
+  }
+
+  if(!merged||merged.geometry.type!=='Polygon'){
+    throw Error('複数の離れた領域になるため統合できません');
+  }
+
+  const coords=merged.geometry.coordinates[0].map(c=>[c[1],c[0]]);
+  coords.pop();
+
+  return{
+    polygon:coords,
+    area:turf.area(merged)
+  };
+}
+
+async function refreshTerritories(){
+  const {data,error}=await supabase
+    .from('territories')
+    .select('id,owner_id,name,area_sqm,polygon,created_at')
+    .order('created_at',{ascending:false});
+
+  if(error){
+    console.error(error);
+    toast('領土の読み込みに失敗: '+error.message);
+    return;
+  }
+
+  const rows=data||[];
+  const ids=[...new Set(rows.map(t=>t.owner_id))];
+  let names={};
+
+  if(ids.length){
+    const p=await supabase
+      .from('profiles')
+      .select('id,username')
+      .in('id',ids);
+
+    if(p.error){
+      console.error(p.error);
+    }else{
+      for(const x of (p.data||[]))names[x.id]=x.username;
+    }
+  }
+
+  territories=rows.map(t=>({
+    ...t,
+    profiles:{username:names[t.owner_id]||'プレイヤー'}
+  }));
+
+  drawTerritories();
+}
+
+async function ensureProfile(u){
+  let {data,error}=await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id',u.id)
+    .maybeSingle();
+
+  if(error)throw error;
+  if(data){profile=data;return}
+
+  let name=u.user_metadata?.username||
+    localStorage.getItem(PROFILE_STORAGE_KEY)||
+    ('PLAYER_'+u.id.slice(0,5));
+
+  name=String(name).trim().slice(0,24)||
+    ('PLAYER_'+u.id.slice(0,5));
+
+  let res=await supabase
+    .from('profiles')
+    .insert({id:u.id,username:name})
+    .select()
+    .single();
+
+  if(res.error?.code==='23505'){
+    res=await supabase
+      .from('profiles')
+      .insert({id:u.id,username:name+'_'+u.id.slice(0,4)})
+      .select()
+      .single();
+  }
+
+  if(res.error)throw res.error;
+  profile=res.data;
+}
+
+function setAuthUI(){
+  $('authForm').hidden=!!user;
+  $('signedIn').hidden=!user;
+
+  if(user){
+    $('username').value=profile?.username||'';
+    $('authState').textContent='ログイン中：'+
+      (profile?.username||user.email)+
+      ' · 領土は全プレイヤーに公開されます。';
+  }else{
+    $('authState').textContent=
+      'ログインすると、獲得した領土がオンラインで共有されます。';
+  }
+
+  $('start').disabled=!user||recording;
+  $('finish').disabled=!recording;
+}
+
+async function migrateLegacy(){
+  const key='territory_migrated_'+user.id;
+  if(localStorage.getItem(key))return;
+
+  let old=[];
+  try{
+    old=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||'[]');
+  }catch(e){}
+
+  if(!Array.isArray(old)||!old.length){
+    localStorage.setItem(key,'1');
+    return;
+  }
+
+  let count=0;
+
+  for(const t of old){
+    if(!Array.isArray(t.points)||t.points.length<3)continue;
+
+    const {error}=await supabase.from('territories').insert({
+      owner_id:user.id,
+      name:String(t.name||'TERRITORY').slice(0,60),
+      area_sqm:Number(t.area)||areaOf(t.points),
+      polygon:t.points
+    });
+
+    if(!error)count++;
+  }
+
+  localStorage.setItem(key,'1');
+
+  if(count)toast('以前の領土を'+count+'件オンラインに移行しました');
+  await refreshTerritories();
+}
+
+async function authChanged(session){
+  user=session?.user||null;
+  profile=null;
+
+  if(channel){
+    await supabase.removeChannel(channel);
+    channel=null;
+  }
+
+  if(user){
+    try{
+      await ensureProfile(user);
+      setAuthUI();
+      await refreshTerritories();
+
+      channel=supabase.channel('territory-live')
+        .on('postgres_changes',{
+          event:'*',
+          schema:'public',
+          table:'territories'
+        },()=>refreshTerritories())
+        .subscribe();
+
+      await migrateLegacy();
+    }catch(e){
+      console.error(e);
+      toast('プロフィール設定エラー: '+e.message);
+      setAuthUI();
+    }
+  }else{
+    territories=[];
+    drawTerritories();
+    setAuthUI();
+  }
+}
+
+async function signUp(){
+  const email=$('email').value.trim();
+  const password=$('password').value;
+
+  if(!email||password.length<6){
+    toast('メールアドレスと6文字以上のパスワードを入力してください');
+    return;
+  }
+
+  const {data,error}=await supabase.auth.signUp({email,password});
+
+  if(error){
+    toast('登録エラー: '+error.message);
+    return;
+  }
+
+  if(data.session){
+    await authChanged(data.session);
+    toast('アカウントを作成しました');
+  }else{
+    toast('確認メールを送信しました。メール内のリンクを開いてからログインしてください');
+  }
+}
+
+async function login(){
+  const email=$('email').value.trim();
+  const password=$('password').value;
+
+  if(!email||!password){
+    toast('メールアドレスとパスワードを入力してください');
+    return;
+  }
+
+  const {data,error}=await supabase.auth.signInWithPassword({
+    email,password
+  });
+
+  if(error){
+    toast('ログインエラー: '+error.message);
+    return;
+  }
+
+  await authChanged(data.session);
+  toast('ログインしました');
+}
+
+async function logout(){
+  stopTracking();
+  recording=false;
+  await supabase.auth.signOut();
+  toast('ログアウトしました');
+}
+
+async function saveUsername(){
+  if(!user)return;
+
+  const username=$('username').value.trim();
+
+  if(username.length<2||username.length>24){
+    toast('プレイヤー名は2〜24文字にしてください');
+    return;
+  }
+
+  const {data,error}=await supabase
+    .from('profiles')
+    .update({username})
+    .eq('id',user.id)
+    .select()
+    .single();
+
+  if(error){
+    toast('名前の保存に失敗: '+error.message);
+    return;
+  }
+
+  profile=data;
+  localStorage.setItem(PROFILE_STORAGE_KEY,username);
+  setAuthUI();
+  await refreshTerritories();
+  toast('プレイヤー名を保存しました');
 }
 
 function start(){
-if(recording)return;
+  if(!user){
+    toast('先にログインしてください');
+    return;
+  }
 
-points=[];
-recording=true;
+  if(recording)return;
 
-if(track){
-map.removeLayer(track);
-track=null;
+  if(mode==='partial'&&!territories.some(own)){
+    toast('部分包囲には自分の既存領土が必要です');
+    return;
+  }
+
+  points=[];
+  recording=true;
+  clearTrack();
+
+  $('distance').textContent='0 m';
+  $('gps').textContent='GPS取得中';
+  $('start').disabled=true;
+  $('finish').disabled=false;
+
+  $('hint').textContent=mode==='full'
+    ?'歩行を記録中。開始地点から40m以内に戻ってください。'
+    :'歩行を記録中。自分の領土の境界付近から別の境界付近まで歩いてください。';
+
+  if(!navigator.geolocation){
+    recording=false;
+    setAuthUI();
+    $('gps').textContent='利用不可';
+    toast('GPSを利用できません');
+    return;
+  }
+
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    if(!recording)return;
+
+    if(pos.coords.accuracy>35){
+      $('gps').textContent='GPS精度低';
+      return;
+    }
+
+    addPoint(pos.coords.latitude,pos.coords.longitude);
+    $('gps').textContent='GPS良好';
+
+    map.panTo([pos.coords.latitude,pos.coords.longitude]);
+
+  },err=>{
+    $('gps').textContent='GPSエラー';
+    toast(err.code===1
+      ?'位置情報の利用を許可してください'
+      :'GPSを取得できません。屋外で再試行してください');
+  },{
+    enableHighAccuracy:true,
+    maximumAge:1000,
+    timeout:15000
+  });
 }
 
-if(currentMarker){
-map.removeLayer(currentMarker);
-currentMarker=null;
+async function finish(){
+  if(!recording||busy)return;
+
+  if(points.length<5){
+    toast('記録点が不足しています（5点以上必要）');
+    return;
+  }
+
+  const d=routeDistance(points);
+  let polygon,area,existing=null;
+
+  if(mode==='full'){
+    const close=distance(points[0],points.at(-1));
+
+    if(d<300){
+      toast('歩行距離が300m未満です');
+      return;
+    }
+
+    if(close>40){
+      toast('開始地点から40m以内に戻ってください（現在 '+Math.round(close)+'m）');
+      return;
+    }
+
+    polygon=points.map(p=>[...p]);
+    area=areaOf(polygon);
+
+  }else{
+    let best=null;
+
+    for(const t of territories.filter(own)){
+      const a=nearestBoundary(points[0],t.polygon);
+      const b=nearestBoundary(points.at(-1),t.polygon);
+      const score=a.distance+b.distance;
+
+      if(!best||score<best.score)best={t,score};
+    }
+
+    if(!best){
+      toast('拡張できる自分の領土がありません');
+      return;
+    }
+
+    existing=best.t;
+
+    try{
+      const result=makeExpansion(existing,points);
+      polygon=result.polygon;
+      area=result.area;
+    }catch(e){
+      toast(e.message);
+      return;
+    }
+  }
+
+  busy=true;
+  $('finish').disabled=true;
+
+  let result;
+
+  if(mode==='full'){
+    result=await supabase.from('territories').insert({
+      owner_id:user.id,
+      name:'TERRITORY',
+      area_sqm:area,
+      polygon
+    }).select().single();
+  }else{
+    result=await supabase.from('territories')
+      .update({area_sqm:area,polygon})
+      .eq('id',existing.id)
+      .eq('owner_id',user.id)
+      .select()
+      .single();
+  }
+
+  busy=false;
+
+  if(result.error){
+    console.error(result.error);
+    toast('保存に失敗: '+result.error.message);
+    $('finish').disabled=false;
+    return;
+  }
+
+  recording=false;
+  stopTracking();
+  $('gps').textContent='保存済み';
+  points=[];
+  clearTrack();
+  $('distance').textContent='0 m';
+  setAuthUI();
+
+  await refreshTerritories();
+
+  const saved=territories.find(t=>t.id===result.data.id);
+  if(saved)focusTerritory(saved.id,false);
+
+  $('hint').textContent=mode==='full'
+    ?'領土を獲得しました。オンラインに保存され、他のプレイヤーにも表示されます。'
+    :'既存領土を拡張し、統合しました。更新内容は全プレイヤーに共有されます。';
+
+  toast(mode==='full'
+    ?'TERRITORY CLAIMED · ONLINE'
+    :'TERRITORY EXPANDED · MERGED');
 }
 
-$('distance').textContent='0 m';
-$('gps').textContent='GPS取得中';
-$('start').disabled=true;
-$('finish').disabled=false;
+async function deleteTerritory(t){
+  if(!confirm('この領土を削除しますか？オンライン上から削除されます。'))return;
 
-$('hint').textContent=
-'歩行を記録中です。安全な歩道を歩き、開始地点の近くに戻ってください。';
+  const {error}=await supabase.from('territories')
+    .delete()
+    .eq('id',t.id)
+    .eq('owner_id',user.id);
 
-if(!navigator.geolocation){
-recording=false;
-$('start').disabled=false;
-$('finish').disabled=true;
-$('gps').textContent='利用不可';
-toast('この端末ではGPSを利用できません');
-return;
+  if(error){
+    toast('削除に失敗: '+error.message);
+    return;
+  }
+
+  await refreshTerritories();
+  toast('領土を削除しました');
 }
 
-watchId=navigator.geolocation.watchPosition(pos=>{
-if(!recording)return;
+function setMode(next){
+  if(recording){
+    toast('記録中はモードを変更できません');
+    return;
+  }
 
-if(pos.coords.accuracy>35){
-$('gps').textContent='GPS精度低';
-return;
+  mode=next;
+  $('fullMode').classList.toggle('active',mode==='full');
+  $('partialMode').classList.toggle('active',mode==='partial');
+
+  $('hint').textContent=mode==='full'
+    ?'完全包囲：300m以上歩き、開始地点から40m以内に戻ってください。'
+    :'部分包囲：自分の既存領土の境界から30m以内で開始・終了し、50m以上歩くと領土を統合・拡張します。';
 }
 
-addPoint(pos.coords.latitude,pos.coords.longitude);
-$('gps').textContent='GPS良好';
-
-map.panTo([
-pos.coords.latitude,
-pos.coords.longitude
-]);
-
-},err=>{
-$('gps').textContent='GPSエラー';
-
-toast(err.code===1
-?'位置情報の利用を許可してください'
-:'GPSを取得できません。屋外で再試行してください');
-
-},{
-enableHighAccuracy:true,
-maximumAge:1000,
-timeout:15000
-});
-}
-
-function finish(){
-if(!recording)return;
-
-if(points.length<5){
-toast('記録点が不足しています（5点以上必要）');
-return;
-}
-
-const d=routeDistance(points);
-const close=distance(points[0],points[points.length-1]);
-
-if(d<300){
-toast('歩行距離が300m未満です');
-return;
-}
-
-if(close>40){
-toast('開始地点から40m以内に戻ってください（現在 '+Math.round(close)+'m）');
-return;
-}
-
-recording=false;
-stopTracking();
-
-$('start').disabled=false;
-$('finish').disabled=true;
-$('gps').textContent='保存済み';
-
-const coords=points.map(p=>[p[0],p[1]]);
-const area=polygonArea(coords);
-
-const territory={
-id:'t_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
-name:'TERRITORY #'+(territories.length+1),
-points:coords,
-area,
-distance:d,
-acquiredAt:new Date().toISOString()
-};
-
-territories.push(territory);
-
-save();
-drawTerritory(territory);
-renderList();
-
-map.fitBounds(
-territoryLayers.get(territory.id).getBounds(),
-{padding:[30,30]}
-);
-
-$('hint').textContent=
-'領土を獲得しました。ブラウザに自動保存されています。再読み込みしても残ります。';
-
-toast('TERRITORY CLAIMED · SAVED');
-
-points=[];
-
-if(track){
-map.removeLayer(track);
-track=null;
-}
-
-if(currentMarker){
-map.removeLayer(currentMarker);
-currentMarker=null;
-}
-
-$('distance').textContent='0 m';
-}
-
+$('signup').addEventListener('click',signUp);
+$('login').addEventListener('click',login);
+$('logout').addEventListener('click',logout);
+$('saveName').addEventListener('click',saveUsername);
 $('start').addEventListener('click',start);
 $('finish').addEventListener('click',finish);
+$('fullMode').addEventListener('click',()=>setMode('full'));
+$('partialMode').addEventListener('click',()=>setMode('partial'));
 
 window.addEventListener('beforeunload',()=>{
-if(recording)stopTracking();
+  if(recording)stopTracking();
 });
 
-load();
-restoreTerritories();
+(async()=>{
+  const {data:{session}}=await supabase.auth.getSession();
+  await authChanged(session);
+
+  supabase.auth.onAuthStateChange((_event,s)=>
+    setTimeout(()=>authChanged(s),0)
+  );
+})();
 
 })();
 </script>
